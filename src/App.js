@@ -93,7 +93,10 @@ export default function App() {
                     return;
                 }
 
-                if (!gameData.players.find(p => p.name === playerName)) {
+                // Check if a player with the same UID is already in the game
+                const existingPlayer = gameData.players.find(p => p.uid === user.uid);
+
+                if (!existingPlayer) {
                      await updateDoc(gameRef, {
                         players: arrayUnion({
                             uid: user.uid,
@@ -448,7 +451,7 @@ function PlayerDashboard({ user, gameId, playerName, onLogout }) {
         return <div className="flex items-center justify-center h-screen bg-gray-900"><div className="text-xl font-semibold text-white">Loading Game Data...</div></div>;
     }
     
-    const player = game.players.find(p => p.name === playerName);
+    const player = game.players.find(p => p.uid === user.uid);
     
     if (!player) {
          return <div className="flex items-center justify-center h-screen bg-gray-900 text-white"><div className="text-xl font-semibold text-red-400">Error: Could not find your player data. Please try re-joining.</div></div>;
@@ -480,7 +483,7 @@ function PlayerDashboard({ user, gameId, playerName, onLogout }) {
                 </div>
                 <div>
                     <div className="text-gray-400 mb-4">
-                        <p>Player: {playerName}</p>
+                        <p>Player: {player.name}</p>
                         <p>Game ID: {gameId}</p>
                     </div>
                     <button onClick={onLogout} className="w-full px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-bold transition-colors">Logout</button>
