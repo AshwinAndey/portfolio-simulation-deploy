@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -248,7 +248,6 @@ function AdminDashboard({ user, onLogout }) {
     };
 
     const generateAssetReturns = async (cycle, market) => {
-        // This function remains the same
         const properties = ALL_ASSETS.reduce((acc, asset) => ({...acc, [asset]: { type: "NUMBER", description: `The percentage return for ${asset}` }}), {});
         const schema = { type: "OBJECT", properties, required: ALL_ASSETS };
         const prompt = `You are an economic data generator for a portfolio management simulation. Based on a ${cycle} phase in the ${market} market, generate a plausible set of annual percentage returns for the following asset classes: ${ALL_ASSETS.join(', ')}. Provide the output as a JSON object that strictly follows the provided schema.`;
@@ -401,7 +400,39 @@ function PortfolioDecisions({ game, player, playerId }) {
     const [currentNews, setCurrentNews] = useState('Loading news...');
 
     useEffect(() => {
-        // AI News Generation logic remains the same
+        const generateNews = async (cycle, market) => {
+            const prompt = `You are a financial news generator for a portfolio management simulation. Generate a short, realistic news headline and a brief market summary (2-3 sentences) for the ${market} market which is currently in a ${cycle} phase of the business cycle. The news should give clues about how different asset classes like debt, equity, and commodities might perform.`;
+            try {
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                    await updateDoc(doc(db, "games", game.id), { [`generatedNews.round${game.currentRound}`]: text });
+                } else {
+                    throw new Error("No content received from API.");
+                }
+            } catch (error) {
+                console.error("Error generating news:", error);
+                setCurrentNews("Could not generate news. The market is in a " + cycle + " phase. Please invest accordingly.");
+            }
+        };
+        const roundIndex = game.currentRound - 1;
+        const newsForRound = game.generatedNews?.[`round${game.currentRound}`];
+        if (newsForRound) {
+            setCurrentNews(newsForRound);
+        } else if (game.status === 'active' && game.roundSettings?.[roundIndex]) {
+            setCurrentNews('Generating the latest market news...');
+            const { cycle, market } = game.roundSettings[roundIndex];
+            generateNews(cycle, market);
+        } else if (game.status === 'finished') {
+            setCurrentNews('The game has finished. Thank you for playing!');
+        } else {
+            setCurrentNews('Waiting for the game to start to get the latest news.');
+        }
     }, [game.currentRound, game.id, game.generatedNews, game.status, game.roundSettings]);
 
     useEffect(() => {
