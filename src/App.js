@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAnalytics } from "firebase/analytics";
+// Removed getAnalytics as it's not being used
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
 
@@ -20,7 +20,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const analytics = getAnalytics(app);
+// The 'analytics' variable was removed as it was causing the build to fail.
+// If you plan to use analytics, you'll need to re-add this and implement tracking.
 
 // --- Asset Classes & Game Settings ---
 const ASSET_CLASSES = {
