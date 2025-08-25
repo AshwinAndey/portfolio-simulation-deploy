@@ -188,7 +188,6 @@ function AdminDashboard({ user, onLogout }) {
             const unsubscribe = onSnapshot(playersColRef, (snapshot) => {
                 const playersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setPlayersInSelectedGame(playersList);
-                // Also update the leaderboard on the main game doc
                 const sortedPlayers = [...playersList].sort((a, b) => b.portfolioValue - a.portfolioValue);
                 updateDoc(doc(db, "games", selectedGame.id), { leaderboard: sortedPlayers });
             });
@@ -243,6 +242,12 @@ function AdminDashboard({ user, onLogout }) {
     const handleStartGame = async () => {
         if (!selectedGame) return;
         await updateDoc(doc(db, "games", selectedGame.id), { status: 'active' });
+    };
+
+    const handleRoundSettingChange = (index, field, value) => {
+        const newSettings = [...roundSettings];
+        newSettings[index] = { ...newSettings[index], [field]: value };
+        setRoundSettings(newSettings);
     };
 
     const generateAssetReturns = async (cycle, market) => {
@@ -314,10 +319,9 @@ function AdminDashboard({ user, onLogout }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-1 bg-gray-800 p-6 rounded-2xl shadow-lg">
                     <h2 className="text-2xl font-semibold mb-4 text-indigo-400">Create New Game</h2>
-                    {/* Game Creation Form */}
                     <div className="space-y-4">
-                        <div><label className="block mb-1 font-medium">Rounds</label><input type="number" value={gameSettings.rounds} onChange={(e) => setGameSettings({...gameSettings, rounds: parseInt(e.target.value)})} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600"/></div>
-                        <div><label className="block mb-1 font-medium">Initial Investment</label><input type="number" value={gameSettings.initialInvestment} onChange={(e) => setGameSettings({...gameSettings, initialInvestment: parseInt(e.target.value)})} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600"/></div>
+                        <div><label className="block mb-1 font-medium">Rounds</label><input type="number" value={gameSettings.rounds} onChange={(e) => setGameSettings({...gameSettings, rounds: parseInt(e.target.value, 10)})} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600"/></div>
+                        <div><label className="block mb-1 font-medium">Initial Investment</label><input type="number" value={gameSettings.initialInvestment} onChange={(e) => setGameSettings({...gameSettings, initialInvestment: parseInt(e.target.value, 10)})} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600"/></div>
                         {Array.from({ length: gameSettings.rounds }).map((_, i) => (
                             <div key={i} className="p-3 bg-gray-700/50 rounded-lg"><label className="block mb-2 font-bold text-gray-300">Round {i + 1} Settings</label><div className="space-y-2"><select value={roundSettings[i]?.cycle} onChange={e => handleRoundSettingChange(i, 'cycle', e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600">{BUSINESS_CYCLES.map(c => <option key={c} value={c}>{c}</option>)}</select><select value={roundSettings[i]?.market} onChange={e => handleRoundSettingChange(i, 'market', e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600">{MARKETS.map(m => <option key={m} value={m}>{m}</option>)}</select></div></div>
                         ))}
@@ -331,12 +335,10 @@ function AdminDashboard({ user, onLogout }) {
                     {selectedGame && (
                         <div>
                             <div className="flex justify-between items-center mb-6"><p className="text-xl">Game ID: <strong className="text-yellow-300">{selectedGame.id}</strong></p><p className="text-xl">Round: <strong className="text-green-400">{selectedGame.currentRound > selectedGame.settings.rounds ? 'Finished' : selectedGame.currentRound}</strong></p><div className="space-x-2">{selectedGame.status === 'pending' && <button onClick={handleStartGame} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Start Game</button>}{selectedGame.status === 'active' && <button onClick={handleAdvanceRound} disabled={isLoading} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold disabled:bg-gray-500">{isLoading ? 'Generating...' : 'Advance Round'}</button>}</div></div>
-                            {/* Add Player Section */}
                             <div className="bg-gray-700/50 p-4 rounded-lg mb-6">
                                 <h3 className="text-lg font-semibold mb-3 text-indigo-400">Add New Player</h3>
                                 <div className="flex gap-4"><input type="text" placeholder="Player Name" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><input type="text" placeholder="Create Player ID" value={newPlayerId} onChange={e => setNewPlayerId(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><button onClick={handleAddPlayer} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Add Player</button></div>
                             </div>
-                            {/* Player List */}
                             <div className="mb-6">
                                 <h3 className="text-lg font-semibold mb-3 text-indigo-400">Player Credentials</h3>
                                 <div className="bg-gray-900 p-4 rounded-lg max-h-48 overflow-y-auto">
@@ -397,11 +399,23 @@ function PortfolioDecisions({ game, player }) {
 
     useEffect(() => {
         const generateNews = async (cycle, market) => {
-            const prompt = `You are a financial news generator...`; // Abridged for brevity
+            const prompt = `You are a financial news generator for a portfolio management simulation. Generate a short, realistic news headline and a brief market summary (2-3 sentences) for the ${market} market which is currently in a ${cycle} phase of the business cycle. The news should give clues about how different asset classes like debt, equity, and commodities might perform.`;
             try {
-                // AI call logic remains the same
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                    await updateDoc(doc(db, "games", game.id), { [`generatedNews.round${game.currentRound}`]: text });
+                } else {
+                    throw new Error("No content received from API.");
+                }
             } catch (error) {
-                // Error handling remains the same
+                console.error("Error generating news:", error);
+                setCurrentNews("Could not generate news. The market is in a " + cycle + " phase. Please invest accordingly.");
             }
         };
         const roundIndex = game.currentRound - 1;
@@ -411,7 +425,7 @@ function PortfolioDecisions({ game, player }) {
         } else if (game.status === 'active' && game.roundSettings?.[roundIndex]) {
             setCurrentNews('Generating the latest market news...');
             const { cycle, market } = game.roundSettings[roundIndex];
-            // generateNews(cycle, market); // Simplified for brevity, logic is unchanged
+            generateNews(cycle, market);
         } else if (game.status === 'finished') {
             setCurrentNews('The game has finished. Thank you for playing!');
         } else {
@@ -485,11 +499,36 @@ function ViewCompetitors({ game, currentPlayerId }) {
         return <div className="bg-gray-800 p-8 rounded-2xl"><h2 className="text-3xl font-bold mb-6 text-indigo-400">View Competitor</h2><p className="text-center text-gray-400 mt-8">No other players have joined yet.</p></div>;
     }
 
+    const relevantRound = game.currentRound > 1 ? game.currentRound - 1 : 1;
+
     return (
         <div className="bg-gray-800 p-8 rounded-2xl">
             <h2 className="text-3xl font-bold mb-6 text-indigo-400">View Competitor</h2>
             <select onChange={(e) => setSelectedPlayerId(e.target.value)} value={selectedPlayerId} className="w-full md:w-1/3 p-3 mb-8 bg-gray-700 rounded-lg border border-gray-600">{competitors.map(p => (<option key={p.id} value={p.id}>{p.name}</option>))}</select>
-            {playerToShow ? (<div>{/* Display logic remains similar */}</div>) : <p>Select a player to view their portfolio.</p>}
+            {playerToShow && playerToShow.allocations?.[`round${relevantRound}`] ? (
+                <div>
+                     <p className="text-xl mb-4">Showing allocations for <strong className="text-yellow-300">{playerToShow.name}</strong> from Round {relevantRound}</p>
+                     <div className="text-center p-4 bg-gray-900 rounded-lg mb-6">
+                        <p className="text-gray-400">Portfolio Value</p>
+                        <p className="text-2xl font-bold text-green-400">₹{playerToShow.portfolioValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                     </div>
+                     <div className="space-y-6">
+                        {Object.entries(ASSET_CLASSES).map(([category, assets]) => (
+                             <div key={category}>
+                                <h3 className="text-xl font-bold capitalize mb-3 text-cyan-400">{category}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                     {assets.map(asset => (
+                                         <div key={asset} className="bg-gray-700 p-4 rounded-lg text-center">
+                                             <p className="text-gray-300">{asset}</p>
+                                             <p className="text-2xl font-bold">{playerToShow.allocations[`round${relevantRound}`][asset] || 0}%</p>
+                                         </div>
+                                     ))}
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                </div>
+            ) : <p className="text-center text-gray-400 mt-8">Data for {playerToShow?.name} is not available for this round yet.</p>}
         </div>
     );
 }
