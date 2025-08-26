@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-// Your web app's Firebase configuration
+// Restored the hardcoded Firebase config to resolve the "process is not defined" error.
+// For production, it's recommended to use environment variables as described previously.
 const firebaseConfig = {
     apiKey: "AIzaSyBazllEufviy3hnnv4tQgpoBAKl3y0LQ6c",
     authDomain: "portfolio-sim-b5a6a.firebaseapp.com",
@@ -14,6 +15,7 @@ const firebaseConfig = {
     appId: "1:691921863009:web:c9daa1a696102358950520",
     measurementId: "G-M1Q5LGXM3W"
 };
+
 
 // --- Initialize Firebase ---
 const app = initializeApp(firebaseConfig);
@@ -148,7 +150,7 @@ export default function App() {
     const renderContent = () => {
         switch (view) {
             case 'admin':
-                return <AdminDashboard user={user} onLogout={handleLogout} />;
+                return <AdminDashboard onLogout={handleLogout} />;
             case 'player':
                 return <PlayerDashboard gameId={gameId} playerId={playerId} onLogout={handleLogout} />;
             default:
@@ -184,7 +186,7 @@ export default function App() {
 }
 
 // --- Admin Dashboard Component ---
-function AdminDashboard({ user, onLogout }) {
+function AdminDashboard({ onLogout }) {
     const [gameSettings, setGameSettings] = useState({ rounds: 5, initialInvestment: 10000000 });
     const [roundSettings, setRoundSettings] = useState(Array(5).fill({ cycle: BUSINESS_CYCLES[0], market: MARKETS[0] }));
     const [createdGameId, setCreatedGameId] = useState(null);
@@ -196,17 +198,16 @@ function AdminDashboard({ user, onLogout }) {
     const [newPlayerId, setNewPlayerId] = useState('');
 
     useEffect(() => {
-        const q = query(collection(db, "games"), where("adminId", "==", user.uid));
+        const q = query(collection(db, "games"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             setActiveGames(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
         return () => unsubscribe();
-    }, [user.uid]);
+    }, []);
 
     const handleCreateGame = async () => {
         const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
         const gameData = {
-            adminId: user.uid,
             settings: gameSettings,
             roundSettings: roundSettings.slice(0, gameSettings.rounds),
             generatedNews: {},
@@ -252,6 +253,18 @@ function AdminDashboard({ user, onLogout }) {
     const handleStartGame = async () => {
         if (!selectedGame) return;
         await updateDoc(doc(db, "games", selectedGame.id), { status: 'active' });
+    };
+
+    const handleDeleteGame = async (gameId) => {
+        if (window.confirm(`Are you sure you want to delete game ${gameId}? This action cannot be undone.`)) {
+            try {
+                await deleteDoc(doc(db, "games", gameId));
+                setSelectedGame(null); // Deselect the game after deletion
+            } catch (error) {
+                console.error("Error deleting game:", error);
+                setAdminError("Failed to delete the game.");
+            }
+        }
     };
 
     const handleRoundSettingChange = (index, field, value) => {
@@ -345,7 +358,15 @@ function AdminDashboard({ user, onLogout }) {
                     <select onChange={(e) => setSelectedGame(activeGames.find(g => g.id === e.target.value))} className="w-full p-3 mb-4 bg-gray-700 rounded-lg border border-gray-600"><option value="">Select a game to manage</option>{activeGames.map(game => <option key={game.id} value={game.id}>{game.id}</option>)}</select>
                     {selectedGame && (
                         <div>
-                            <div className="flex justify-between items-center mb-6"><p className="text-xl">Game ID: <strong className="text-yellow-300">{selectedGame.id}</strong></p><p className="text-xl">Round: <strong className="text-green-400">{selectedGame.currentRound > selectedGame.settings.rounds ? 'Finished' : selectedGame.currentRound}</strong></p><div className="space-x-2">{selectedGame.status === 'pending' && <button onClick={handleStartGame} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Start Game</button>}{selectedGame.status === 'active' && <button onClick={handleAdvanceRound} disabled={isLoading} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold disabled:bg-gray-500">{isLoading ? 'Generating...' : 'Advance Round'}</button>}</div></div>
+                            <div className="flex justify-between items-center mb-6">
+                                <p className="text-xl">Game ID: <strong className="text-yellow-300">{selectedGame.id}</strong></p>
+                                <p className="text-xl">Round: <strong className="text-green-400">{selectedGame.currentRound > selectedGame.settings.rounds ? 'Finished' : selectedGame.currentRound}</strong></p>
+                                <div className="space-x-2">
+                                    {selectedGame.status === 'pending' && <button onClick={handleStartGame} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Start Game</button>}
+                                    {selectedGame.status === 'active' && <button onClick={handleAdvanceRound} disabled={isLoading} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold disabled:bg-gray-500">{isLoading ? 'Generating...' : 'Advance Round'}</button>}
+                                    <button onClick={() => handleDeleteGame(selectedGame.id)} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold">Delete Game</button>
+                                </div>
+                            </div>
                             <div className="bg-gray-700/50 p-4 rounded-lg mb-6">
                                 <h3 className="text-lg font-semibold mb-3 text-indigo-400">Add New Player</h3>
                                 <div className="flex gap-4"><input type="text" placeholder="Player Name" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><input type="text" placeholder="Create Player ID" value={newPlayerId} onChange={e => setNewPlayerId(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><button onClick={handleAddPlayer} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Add Player</button></div>
