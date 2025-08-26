@@ -5,7 +5,7 @@ import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, updat
 
 // --- Firebase Configuration ---
 // Restored the hardcoded Firebase config to resolve the "process is not defined" error.
-// For production, it's recommended to use environment variables as described previously.
+// For a real production deployment, you would use environment variables.
 const firebaseConfig = {
     apiKey: "AIzaSyBazllEufviy3hnnv4tQgpoBAKl3y0LQ6c",
     authDomain: "portfolio-sim-b5a6a.firebaseapp.com",
@@ -259,7 +259,7 @@ function AdminDashboard({ onLogout }) {
         if (window.confirm(`Are you sure you want to delete game ${gameId}? This action cannot be undone.`)) {
             try {
                 await deleteDoc(doc(db, "games", gameId));
-                setSelectedGame(null); // Deselect the game after deletion
+                setSelectedGame(null);
             } catch (error) {
                 console.error("Error deleting game:", error);
                 setAdminError("Failed to delete the game.");
