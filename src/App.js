@@ -4,8 +4,6 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-// Restored the hardcoded Firebase config to resolve the "process is not defined" error.
-// For a real production deployment, you would use environment variables.
 const firebaseConfig = {
     apiKey: "AIzaSyBazllEufviy3hnnv4tQgpoBAKl3y0LQ6c",
     authDomain: "portfolio-sim-b5a6a.firebaseapp.com",
@@ -15,7 +13,6 @@ const firebaseConfig = {
     appId: "1:691921863009:web:c9daa1a696102358950520",
     measurementId: "G-M1Q5LGXM3W"
 };
-
 
 // --- Initialize Firebase ---
 const app = initializeApp(firebaseConfig);
@@ -35,6 +32,55 @@ const MARKETS = ['Indian', 'US', 'Global'];
 // --- Hardcoded Admin Credentials ---
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin123";
+
+// --- Rule-Based Scenario Engine ---
+const scenarioEngine = {
+    getAssetReturns: (cycle) => {
+        const rules = {
+            Recession: { 'Money Market Funds': [1, 2], 'Govt. Security': [2, 4], 'Corp AAA': [0, 2], 'Corp BBB': [-5, 0], 'Corp CCC': [-20, -10], 'Capital Goods': [-30, -20], Finance: [-35, -25], Defense: [5, 15], 'Agri. Comm': [-5, 5], Metals: [-25, -15], 'Gold-ETF': [10, 20] },
+            Trough: { 'Money Market Funds': [0.5, 1.5], 'Govt. Security': [3, 5], 'Corp AAA': [1, 3], 'Corp BBB': [-2, 2], 'Corp CCC': [-15, 0], 'Capital Goods': [-25, -10], Finance: [-30, -15], Defense: [8, 18], 'Agri. Comm': [0, 10], Metals: [-20, -5], 'Gold-ETF': [5, 15] },
+            Recovery: { 'Money Market Funds': [1, 2], 'Govt. Security': [1, 3], 'Corp AAA': [3, 6], 'Corp BBB': [5, 10], 'Corp CCC': [10, 25], 'Capital Goods': [20, 40], Finance: [25, 50], Defense: [0, 10], 'Agri. Comm': [5, 15], Metals: [15, 30], 'Gold-ETF': [-5, 5] },
+            Growth: { 'Money Market Funds': [2, 3], 'Govt. Security': [0, 2], 'Corp AAA': [4, 7], 'Corp BBB': [8, 15], 'Corp CCC': [15, 30], 'Capital Goods': [25, 50], Finance: [30, 60], Defense: [-5, 5], 'Agri. Comm': [10, 20], Metals: [20, 40], 'Gold-ETF': [-10, 0] },
+            Peak: { 'Money Market Funds': [2.5, 4], 'Govt. Security': [-2, 1], 'Corp AAA': [2, 5], 'Corp BBB': [0, 8], 'Corp CCC': [-10, 10], 'Capital Goods': [5, 20], Finance: [0, 25], Defense: [-10, 0], 'Agri. Comm': [0, 10], Metals: [-15, 5], 'Gold-ETF': [-5, 5] }
+        };
+        
+        const cycleRules = rules[cycle] || rules['Growth'];
+        const returns = {};
+
+        for (const asset of ALL_ASSETS) {
+            const [min, max] = cycleRules[asset];
+            returns[asset] = parseFloat((Math.random() * (max - min) + min).toFixed(2));
+        }
+        return returns;
+    },
+    getNews: (cycle, market) => {
+        const templates = {
+            Recession: [
+                { headline: `Central Bank Signals Further Rate Cuts Amidst ${market} Economic Downturn`, summary: `Fears of a deepening recession are growing as new data shows rising unemployment and falling industrial output. The central bank is expected to cut interest rates further to stimulate the economy, making government bonds more attractive.`},
+                { headline: `${market} Market Enters Bear Territory as GDP Contracts Sharply`, summary: `Investor confidence has hit a new low after official figures confirmed the economy shrank for a second consecutive quarter. Corporate earnings are expected to fall significantly, with cyclical sectors like capital goods and finance hit the hardest.`},
+            ],
+            Trough: [
+                { headline: `Market Volatility Persists in ${market}; Investors Seek Safe Havens`, summary: `Although the pace of economic decline appears to be slowing, uncertainty remains high. Investors are cautiously optimistic but are largely staying in safe-haven assets like gold and high-quality government debt until a clear recovery begins.`},
+                { headline: `Signs of Bottoming? ${market} Industrial Production Stabilizes`, summary: `After months of decline, industrial production figures have remained flat, sparking hope that the worst of the downturn may be over. However, credit markets remain tight, and corporate bond defaults are still a major concern.`},
+            ],
+            Recovery: [
+                { headline: `Economic Green Shoots Appear as ${market} Consumer Confidence Rebounds`, summary: `A surprising jump in consumer confidence and retail sales suggests a recovery is underway. Corporate profits are expected to rebound, leading to a rally in equities, particularly in the finance and capital goods sectors.`},
+                { headline: `Infrastructure Spending Boosts ${market} Recovery Hopes`, summary: `The government has announced a major infrastructure spending plan, boosting shares in capital goods and metals. This fiscal stimulus is expected to accelerate the economic recovery and increase demand for corporate credit.`},
+            ],
+            Growth: [
+                { headline: `${market} Bull Market Rages on as Corporate Earnings Soar`, summary: `The stock market continues to reach new highs, driven by strong corporate earnings and robust economic growth. Investor appetite for risk is high, with significant inflows into equities and high-yield corporate bonds.`},
+                { headline: `Inflation Concerns Rise in ${market} as Economy Overheats`, summary: `Strong economic growth is leading to concerns about rising inflation, prompting the central bank to consider raising interest rates. This could negatively impact government bond prices in the near future.`},
+            ],
+            Peak: [
+                { headline: `Central Bank Hikes Rates to Cool Overheating ${market} Economy`, summary: `In a bid to control inflation, the central bank has raised interest rates for the third time this year. The move has caused jitters in the stock market, with analysts warning that the long period of growth may be coming to an end.`},
+                { headline: `Market Volatility Spikes in ${market} Amidst Fears of a Slowdown`, summary: `After a prolonged period of strong performance, the market is showing signs of fatigue. Corporate earnings growth is slowing, and rising interest rates are making debt more expensive, leading to a sell-off in riskier assets.`},
+            ]
+        };
+        const cycleTemplates = templates[cycle] || templates['Growth'];
+        const selected = cycleTemplates[Math.floor(Math.random() * cycleTemplates.length)];
+        return `${selected.headline}\n\n${selected.summary}`;
+    }
+};
 
 // --- Main App Component ---
 export default function App() {
@@ -273,39 +319,15 @@ function AdminDashboard({ onLogout }) {
         setRoundSettings(newSettings);
     };
 
-    const generateAssetReturns = async (cycle, market) => {
-        const properties = ALL_ASSETS.reduce((acc, asset) => ({...acc, [asset]: { type: "NUMBER", description: `The percentage return for ${asset}` }}), {});
-        const schema = { type: "OBJECT", properties, required: ALL_ASSETS };
-        const prompt = `You are an economic data generator for a portfolio management simulation. Based on a ${cycle} phase in the ${market} market, generate a plausible set of annual percentage returns for the following asset classes: ${ALL_ASSETS.join(', ')}. Provide the output as a JSON object that strictly follows the provided schema.`;
-        try {
-            const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
-            const result = await response.json();
-            const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!jsonText) throw new Error("No content received from API.");
-            return JSON.parse(jsonText);
-        } catch (error) {
-            console.error("Error generating asset returns:", error);
-            setAdminError("AI failed to generate asset returns. Please try again.");
-            return null;
-        }
-    };
-
     const handleAdvanceRound = async () => {
         if (!selectedGame || selectedGame.currentRound > selectedGame.settings.rounds) return;
         setIsLoading(true);
         setAdminError('');
-        const roundIndex = selectedGame.currentRound - 1;
-        const { cycle, market } = selectedGame.roundSettings[roundIndex];
-        const newReturns = await generateAssetReturns(cycle, market);
-        if (!newReturns) {
-            setIsLoading(false);
-            return;
-        }
         
+        const roundIndex = selectedGame.currentRound - 1;
+        const { cycle } = selectedGame.roundSettings[roundIndex];
+        const newReturns = scenarioEngine.getAssetReturns(cycle);
+
         const gameRef = doc(db, "games", selectedGame.id);
         const gameSnap = await getDoc(gameRef);
         const gameData = gameSnap.data();
@@ -438,40 +460,16 @@ function PortfolioDecisions({ game, player, playerId }) {
     const [currentNews, setCurrentNews] = useState('Loading news...');
 
     useEffect(() => {
-        const generateNews = async (cycle, market) => {
-            const prompt = `You are a financial news generator for a portfolio management simulation. Generate a short, realistic news headline and a brief market summary (2-3 sentences) for the ${market} market which is currently in a ${cycle} phase of the business cycle. The news should give clues about how different asset classes like debt, equity, and commodities might perform.`;
-            try {
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
-                const result = await response.json();
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    await updateDoc(doc(db, "games", game.id), { [`generatedNews.round${game.currentRound}`]: text });
-                } else {
-                    throw new Error("No content received from API.");
-                }
-            } catch (error) {
-                console.error("Error generating news:", error);
-                setCurrentNews("Could not generate news. The market is in a " + cycle + " phase. Please invest accordingly.");
-            }
-        };
         const roundIndex = game.currentRound - 1;
-        const newsForRound = game.generatedNews?.[`round${game.currentRound}`];
-        if (newsForRound) {
-            setCurrentNews(newsForRound);
-        } else if (game.status === 'active' && game.roundSettings?.[roundIndex]) {
-            setCurrentNews('Generating the latest market news...');
+        if (game.status === 'active' && game.roundSettings?.[roundIndex]) {
             const { cycle, market } = game.roundSettings[roundIndex];
-            generateNews(cycle, market);
+            setCurrentNews(scenarioEngine.getNews(cycle, market));
         } else if (game.status === 'finished') {
             setCurrentNews('The game has finished. Thank you for playing!');
         } else {
             setCurrentNews('Waiting for the game to start to get the latest news.');
         }
-    }, [game.currentRound, game.id, game.generatedNews, game.status, game.roundSettings]);
+    }, [game.currentRound, game.status, game.roundSettings]);
 
     useEffect(() => {
         const currentAllocations = player.allocations?.[`round${game.currentRound}`] || ALL_ASSETS.reduce((acc, asset) => ({ ...acc, [asset]: 0 }), {});
