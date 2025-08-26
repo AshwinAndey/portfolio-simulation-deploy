@@ -29,9 +29,9 @@ const ALL_ASSETS = [...ASSET_CLASSES.debt, ...ASSET_CLASSES.equity, ...ASSET_CLA
 const BUSINESS_CYCLES = ['Recession', 'Trough', 'Recovery', 'Growth', 'Peak'];
 const MARKETS = ['Indian', 'US', 'Global'];
 
-// --- Hardcoded Admin Credentials ---
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "admin123";
+// --- Encoded Admin Credentials ---
+const ADMIN_USER = "YWRtaW4="; // "admin"
+const ADMIN_PASS = "YWRtaW4xMjM="; // "admin123"
 
 // --- Encoded Rule-Based Scenario Engine ---
 const scenarioEngine = {
@@ -96,7 +96,7 @@ export default function App() {
             return;
         }
         if (role === 'admin') {
-            if (adminUsername === ADMIN_USER && adminPassword === ADMIN_PASS) {
+            if (btoa(adminUsername) === ADMIN_USER && btoa(adminPassword) === ADMIN_PASS) {
                 setView('admin');
             } else {
                 setError('Invalid admin credentials.');
@@ -537,6 +537,7 @@ function PastReturns({ game }) {
     const chartInstance = useRef(null);
 
     useEffect(() => {
+        if (!window.Chart) return;
         if (game.currentRound < 2 || !game.assetReturns) return;
 
         const labels = [];
@@ -545,7 +546,7 @@ function PastReturns({ game }) {
             data: [],
             borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
             tension: 0.1,
-            hidden: !ASSET_CLASSES.debt.includes(asset) // Show debt by default
+            hidden: !ASSET_CLASSES.debt.includes(asset)
         }));
 
         for (let i = 1; i < game.currentRound; i++) {
