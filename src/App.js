@@ -4,11 +4,12 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
+// Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBazllEufviy3hnnv4tQgpoBAKl3y0LQ6c",
     authDomain: "portfolio-sim-b5a6a.firebaseapp.com",
     projectId: "portfolio-sim-b5a6a",
-    storageBucket: "portfolio-sim-b5a6a.firebasestorage.app",
+    storageBucket: "portfolio-sim-b5a6a.appspot.com",
     messagingSenderId: "691921863009",
     appId: "1:691921863009:web:c9daa1a696102358950520",
     measurementId: "G-M1Q5LGXM3W"
@@ -29,6 +30,10 @@ const ALL_ASSETS = [...ASSET_CLASSES.debt, ...ASSET_CLASSES.equity, ...ASSET_CLA
 const BUSINESS_CYCLES = ['Recession', 'Trough', 'Recovery', 'Growth', 'Peak'];
 const MARKETS = ['Indian', 'US', 'Global'];
 
+// --- Hardcoded Admin Credentials ---
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "admin123";
+
 // --- Main App Component ---
 export default function App() {
     const [user, setUser] = useState(null);
@@ -37,6 +42,8 @@ export default function App() {
     const [gameId, setGameId] = useState('');
     const [playerId, setPlayerId] = useState('');
     const [playerPin, setPlayerPin] = useState('');
+    const [adminUsername, setAdminUsername] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
     const [error, setError] = useState('');
     const [authError, setAuthError] = useState('');
 
@@ -67,7 +74,11 @@ export default function App() {
             return;
         }
         if (role === 'admin') {
-            setView('admin');
+            if (adminUsername === ADMIN_USER && adminPassword === ADMIN_PASS) {
+                setView('admin');
+            } else {
+                setError('Invalid admin credentials.');
+            }
         } else {
             if (!gameId.trim() || !playerId.trim() || !playerPin.trim()) {
                 setError('Please enter Game ID, Player ID, and PIN.');
@@ -108,6 +119,8 @@ export default function App() {
         setGameId('');
         setPlayerId('');
         setPlayerPin('');
+        setAdminUsername('');
+        setAdminPassword('');
         setError('');
     };
     
@@ -154,8 +167,10 @@ export default function App() {
                                 </button>
                             </div>
                             <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-600"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-gray-800 text-gray-400">or</span></div></div>
-                            <div className="space-y-2">
+                            <div className="space-y-6">
                                 <h2 className="text-2xl font-semibold text-center">Admin Panel</h2>
+                                <input type="text" placeholder="Admin Username" value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                <input type="password" placeholder="Admin Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                                 <button onClick={() => handleLogin('admin')} disabled={!isAuthReady} className="w-full px-4 py-3 font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
                                     {isAuthReady ? 'Login as Admin' : 'Authenticating...'}
                                 </button>
@@ -197,7 +212,7 @@ function AdminDashboard({ user, onLogout }) {
             generatedNews: {},
             assetReturns: {},
             currentRound: 1,
-            players: {}, // Players are now a map/object
+            players: {},
             status: 'pending'
         };
         try {
@@ -216,14 +231,12 @@ function AdminDashboard({ user, onLogout }) {
         }
         setAdminError('');
         const pin = Math.floor(1000 + Math.random() * 9000).toString();
-        
         const newPlayer = {
             name: newPlayerName,
             pin: pin,
             portfolioValue: selectedGame.settings.initialInvestment,
             allocations: {}
         };
-
         try {
             await updateDoc(doc(db, "games", selectedGame.id), {
                 [`players.${newPlayerId}`]: newPlayer
@@ -280,7 +293,11 @@ function AdminDashboard({ user, onLogout }) {
             return;
         }
         
-        const updatedPlayers = { ...selectedGame.players };
+        const gameRef = doc(db, "games", selectedGame.id);
+        const gameSnap = await getDoc(gameRef);
+        const gameData = gameSnap.data();
+
+        const updatedPlayers = { ...gameData.players };
         for (const pId in updatedPlayers) {
             const player = updatedPlayers[pId];
             const playerAllocations = player.allocations?.[`round${selectedGame.currentRound}`] || {};
@@ -294,7 +311,7 @@ function AdminDashboard({ user, onLogout }) {
         }
 
         const isLastRound = selectedGame.currentRound === selectedGame.settings.rounds;
-        await updateDoc(doc(db, "games", selectedGame.id), {
+        await updateDoc(gameRef, {
             [`assetReturns.round${selectedGame.currentRound}`]: newReturns,
             players: updatedPlayers,
             currentRound: selectedGame.currentRound + 1,
