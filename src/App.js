@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
 // Restored the hardcoded Firebase config to resolve the "process is not defined" error.
@@ -38,7 +38,7 @@ const ADMIN_PASS = "admin123";
 
 // --- Main App Component ---
 export default function App() {
-    const [user, setUser] = useState(null);
+    const [, setUser] = useState(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [view, setView] = useState('login');
     const [gameId, setGameId] = useState('');
