@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -261,7 +261,8 @@ function AdminDashboard({ onLogout }) {
             name: newPlayerName,
             pin: pin,
             portfolioValue: selectedGame.settings.initialInvestment,
-            allocations: {}
+            allocations: {},
+            saves: {}
         };
         try {
             await updateDoc(doc(db, "games", selectedGame.id), {
@@ -373,9 +374,18 @@ function AdminDashboard({ onLogout }) {
                                 <div className="flex gap-4"><input type="text" placeholder="Player Name" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><input type="text" placeholder="Create Player ID" value={newPlayerId} onChange={e => setNewPlayerId(e.target.value)} className="flex-1 p-2 bg-gray-700 rounded-lg border border-gray-600" /><button onClick={handleAddPlayer} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Add Player</button></div>
                             </div>
                             <div className="mb-6">
-                                <h3 className="text-lg font-semibold mb-3 text-indigo-400">Player Credentials</h3>
+                                <h3 className="text-lg font-semibold mb-3 text-indigo-400">Player Credentials & Status</h3>
                                 <div className="bg-gray-900 p-4 rounded-lg max-h-48 overflow-y-auto">
-                                    {playersArray.length > 0 ? playersArray.map(p => (<div key={p.id} className="flex justify-between items-center p-2 border-b border-gray-700"><p>{p.name}</p><p className="text-gray-400">ID: <span className="font-mono text-yellow-300">{p.id}</span></p><p className="text-gray-400">PIN: <span className="font-mono text-yellow-300">{p.pin}</span></p></div>)) : <p className="text-gray-500 text-center">No players added yet.</p>}
+                                    {playersArray.length > 0 ? playersArray.map(p => (
+                                        <div key={p.id} className="flex justify-between items-center p-2 border-b border-gray-700">
+                                            <div className="flex items-center">
+                                                <span className={`w-3 h-3 rounded-full mr-3 ${p.allocations?.[`round${selectedGame.currentRound}`] ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                                                <p>{p.name}</p>
+                                            </div>
+                                            <p className="text-gray-400">ID: <span className="font-mono text-yellow-300">{p.id}</span></p>
+                                            <p className="text-gray-400">PIN: <span className="font-mono text-yellow-300">{p.pin}</span></p>
+                                        </div>
+                                    )) : <p className="text-gray-500 text-center">No players added yet.</p>}
                                 </div>
                             </div>
                             <Leaderboard players={playersArray} gameStatus={selectedGame.status} />
@@ -443,6 +453,7 @@ function PortfolioDecisions({ game, player, playerId }) {
     const [total, setTotal] = useState(0);
     const [message, setMessage] = useState({text: '', type: ''});
     const [currentNews, setCurrentNews] = useState('Loading news...');
+    const [savesRemaining, setSavesRemaining] = useState(3);
 
     useEffect(() => {
         const roundIndex = game.currentRound - 1;
@@ -454,7 +465,11 @@ function PortfolioDecisions({ game, player, playerId }) {
         } else {
             setCurrentNews('Waiting for the game to start to get the latest news.');
         }
-    }, [game.currentRound, game.status, game.roundSettings]);
+
+        const savesForRound = player.saves?.[`round${game.currentRound}`];
+        setSavesRemaining(savesForRound === undefined ? 3 : savesForRound);
+
+    }, [game.currentRound, game.status, game.roundSettings, player.saves]);
 
     useEffect(() => {
         const lastRoundAllocations = player.allocations?.[`round${game.currentRound - 1}`];
@@ -477,34 +492,90 @@ function PortfolioDecisions({ game, player, playerId }) {
             setMessage({text: "Total allocation must be 100%.", type: 'error'});
             return;
         }
+        if (savesRemaining <= 0) {
+            setMessage({text: "You have no saves remaining for this round.", type: 'error'});
+            return;
+        }
+
+        const newSavesRemaining = savesRemaining - 1;
+
         try {
             await updateDoc(doc(db, "games", game.id), {
-                [`players.${playerId}.allocations.round${game.currentRound}`]: allocations
+                [`players.${playerId}.allocations.round${game.currentRound}`]: allocations,
+                [`players.${playerId}.saves.round${game.currentRound}`]: newSavesRemaining
             });
-            setMessage({text: "Portfolio saved successfully!", type: 'success'});
+            setMessage({text: `Portfolio saved successfully! You have ${newSavesRemaining} saves left.`, type: 'success'});
         } catch (error) {
             console.error("Error saving portfolio: ", error);
             setMessage({text: "Failed to save portfolio.", type: 'error'});
         }
     };
     
-    const isRoundSubmitted = player.allocations && player.allocations[`round${game.currentRound}`];
     const isGameFinished = game.status === 'finished';
+    const canSave = savesRemaining > 0 && game.status === 'active';
 
     return (
         <div>
             <div className="bg-gray-800 p-6 rounded-2xl mb-8"><h2 className="text-xl font-bold text-indigo-400 mb-2">News - Round {isGameFinished ? game.settings.rounds : game.currentRound}</h2><p className="whitespace-pre-wrap">{currentNews}</p></div>
             <div className="flex justify-between items-center mb-8"><div><p className="text-gray-400">Portfolio Value</p><p className="text-4xl font-bold text-green-400">₹{player.portfolioValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p></div><div className="text-right"><p className="text-gray-400">Total Allocation</p><p className={`text-4xl font-bold ${total === 100 ? 'text-green-400' : 'text-red-400'}`}>{total}%</p></div></div>
-            <div className="space-y-8">{Object.entries(ASSET_CLASSES).map(([category, assets]) => (<div key={category} className="bg-gray-800 p-6 rounded-2xl"><h3 className="text-2xl font-bold capitalize mb-4 text-cyan-400">{category}</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{assets.map(asset => (<div key={asset}><label className="block mb-2 font-medium">{asset}</label><input type="number" min="0" max="100" value={allocations[asset] || 0} onChange={(e) => handleAllocationChange(asset, e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500" disabled={isRoundSubmitted || game.status !== 'active'}/></div>))}</div></div>))}</div>
-            <div className="mt-8 text-center">{message.text && <p className={`mb-4 text-lg ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{message.text}</p>}{isGameFinished && <p className="text-green-400 text-lg font-bold">The game has finished. Check the final leaderboard!</p>}{game.status === 'pending' && <p className="text-yellow-400 text-lg">The game has not started yet.</p>}{isRoundSubmitted && game.status === 'active' && <p className="text-green-400 text-lg">Your portfolio for Round {game.currentRound} is submitted.</p>}{!isRoundSubmitted && game.status === 'active' && (<button onClick={handleSave} className="px-10 py-4 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold text-xl transition-colors">Save Portfolio for Round {game.currentRound}</button>)}</div>
+            <div className="space-y-8">{Object.entries(ASSET_CLASSES).map(([category, assets]) => (<div key={category} className="bg-gray-800 p-6 rounded-2xl"><h3 className="text-2xl font-bold capitalize mb-4 text-cyan-400">{category}</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{assets.map(asset => (<div key={asset}><label className="block mb-2 font-medium">{asset}</label><input type="number" min="0" max="100" value={allocations[asset] || 0} onChange={(e) => handleAllocationChange(asset, e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500" disabled={!canSave}/></div>))}</div></div>))}</div>
+            <div className="mt-8 text-center">
+                {message.text && <p className={`mb-4 text-lg ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{message.text}</p>}
+                {isGameFinished && <p className="text-green-400 text-lg font-bold">The game has finished. Check the final leaderboard!</p>}
+                {game.status === 'pending' && <p className="text-yellow-400 text-lg">The game has not started yet.</p>}
+                {game.status === 'active' && <p className="text-lg text-gray-300 mb-4">Saves Remaining for this Round: <span className="font-bold text-yellow-400">{savesRemaining}</span></p>}
+                {canSave && (<button onClick={handleSave} className="px-10 py-4 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold text-xl transition-colors">Save Portfolio for Round {game.currentRound}</button>)}
+                {savesRemaining <= 0 && game.status === 'active' && <p className="text-green-400 text-lg">Your portfolio is locked in for Round {game.currentRound}. Waiting for the next round.</p>}
+            </div>
         </div>
     );
 }
 
 // --- Past Returns Component ---
 function PastReturns({ game }) {
-    const pastRound = game.currentRound - 1;
-    if (pastRound < 1) {
+    const chartRef = useRef(null);
+    const chartInstance = useRef(null);
+
+    useEffect(() => {
+        if (game.currentRound < 2 || !game.assetReturns) return;
+
+        const labels = [];
+        const datasets = ALL_ASSETS.map(asset => ({
+            label: asset,
+            data: [],
+            borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+            tension: 0.1,
+            hidden: !ASSET_CLASSES.debt.includes(asset) // Show debt by default
+        }));
+
+        for (let i = 1; i < game.currentRound; i++) {
+            labels.push(`Round ${i}`);
+            const roundReturns = game.assetReturns[`round${i}`];
+            if (roundReturns) {
+                datasets.forEach(dataset => {
+                    dataset.data.push(roundReturns[dataset.label] || 0);
+                });
+            }
+        }
+
+        if (chartRef.current) {
+            if (chartInstance.current) {
+                chartInstance.current.destroy();
+            }
+            const ctx = chartRef.current.getContext('2d');
+            chartInstance.current = new window.Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' }, title: { display: true, text: 'Historical Asset Returns (%)' } },
+                    scales: { y: { beginAtZero: false, title: { display: true, text: 'Return %' } } }
+                }
+            });
+        }
+    }, [game.assetReturns, game.currentRound]);
+
+    if (game.currentRound < 2) {
         return (
             <div className="bg-gray-800 p-8 rounded-2xl">
                 <h2 className="text-3xl font-bold mb-6 text-indigo-400">Past Round Returns</h2>
@@ -513,35 +584,10 @@ function PastReturns({ game }) {
         );
     }
 
-    const returns = game.assetReturns?.[`round${pastRound}`];
-
-    if (!returns) {
-        return (
-            <div className="bg-gray-800 p-8 rounded-2xl">
-                <h2 className="text-3xl font-bold mb-6 text-indigo-400">Past Round Returns</h2>
-                <p className="text-center text-gray-400 mt-8">Data for the previous round is not yet available.</p>
-            </div>
-        );
-    }
-
     return (
         <div className="bg-gray-800 p-8 rounded-2xl">
-            <h2 className="text-3xl font-bold mb-6 text-indigo-400">Returns from Round {pastRound}</h2>
-            <div className="space-y-6">
-                {Object.entries(ASSET_CLASSES).map(([category, assets]) => (
-                     <div key={category}>
-                        <h3 className="text-xl font-bold capitalize mb-3 text-cyan-400">{category}</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                             {assets.map(asset => (
-                                 <div key={asset} className="bg-gray-700 p-4 rounded-lg text-center">
-                                     <p className="text-gray-300">{asset}</p>
-                                     <p className={`text-2xl font-bold ${returns[asset] >= 0 ? 'text-green-400' : 'text-red-400'}`}>{returns[asset]}%</p>
-                                 </div>
-                             ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <h2 className="text-3xl font-bold mb-6 text-indigo-400">Past Returns Trend</h2>
+            <canvas ref={chartRef}></canvas>
         </div>
     );
 }
