@@ -33,52 +33,26 @@ const MARKETS = ['Indian', 'US', 'Global'];
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin123";
 
-// --- Rule-Based Scenario Engine ---
+// --- Encoded Rule-Based Scenario Engine ---
 const scenarioEngine = {
     getAssetReturns: (cycle) => {
-        const rules = {
-            Recession: { 'Money Market Funds': [1, 2], 'Govt. Security': [2, 4], 'Corp AAA': [0, 2], 'Corp BBB': [-5, 0], 'Corp CCC': [-20, -10], 'Capital Goods': [-30, -20], Finance: [-35, -25], Defense: [5, 15], 'Agri. Comm': [-5, 5], Metals: [-25, -15], 'Gold-ETF': [10, 20] },
-            Trough: { 'Money Market Funds': [0.5, 1.5], 'Govt. Security': [3, 5], 'Corp AAA': [1, 3], 'Corp BBB': [-2, 2], 'Corp CCC': [-15, 0], 'Capital Goods': [-25, -10], Finance: [-30, -15], Defense: [8, 18], 'Agri. Comm': [0, 10], Metals: [-20, -5], 'Gold-ETF': [5, 15] },
-            Recovery: { 'Money Market Funds': [1, 2], 'Govt. Security': [1, 3], 'Corp AAA': [3, 6], 'Corp BBB': [5, 10], 'Corp CCC': [10, 25], 'Capital Goods': [20, 40], Finance: [25, 50], Defense: [0, 10], 'Agri. Comm': [5, 15], Metals: [15, 30], 'Gold-ETF': [-5, 5] },
-            Growth: { 'Money Market Funds': [2, 3], 'Govt. Security': [0, 2], 'Corp AAA': [4, 7], 'Corp BBB': [8, 15], 'Corp CCC': [15, 30], 'Capital Goods': [25, 50], Finance: [30, 60], Defense: [-5, 5], 'Agri. Comm': [10, 20], Metals: [20, 40], 'Gold-ETF': [-10, 0] },
-            Peak: { 'Money Market Funds': [2.5, 4], 'Govt. Security': [-2, 1], 'Corp AAA': [2, 5], 'Corp BBB': [0, 8], 'Corp CCC': [-10, 10], 'Capital Goods': [5, 20], Finance: [0, 25], Defense: [-10, 0], 'Agri. Comm': [0, 10], Metals: [-15, 5], 'Gold-ETF': [-5, 5] }
-        };
-        
+        const encodedRules = "eyJSZWNlc3Npb24iOnsiTW9uZXkgTWFya2V0IEZ1bmRzIjp7ImJhc2UiOjEuNSwidm9sIjoyfSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6Mywidm9sIjoyfSwiQ29ycCBBQUEiOnsiYmFzZSI6MSwidm9sIjozfSwiQ29ycCBCQkIiOnsiYmFzZSI6LTMsInZvbCI6NX0sIkNvcnAgQ0NDIjp7ImJhc2UiOi0xNSwidm9sIjoxNX0sIkNhcGl0YWwgR29vZHMiOnsiYmFzZSI6LTI1LCJ2b2wiOjE1fSwiRmluYW5jZSI6eyJiYXNlIjotMzAsInZvbCI6MTV9LCJEZWZlbnNlIjp7ImJhc2UiOjEwLCJ2b2wiOjEwfSwiQWdyaS4gQ29tbSI6eyJiYXNlIjowLCJ2b2wiOjEwfSwiTWV0YWxzIjp7ImJhc2UiOi0yMCwidm9sIjoxNX0sIkdvbGQtRVRGIjp7ImJhc2UiOjE1LCJ2b2wiOjEwfX0sIlRyb3VnaCI6eyJNb25leSBNYXJrZXQgRnVuZHMiOnsiYmFzZSI6MSwidm9sIjoxfSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6NCwidm9sIjoyfSwiQ29ycCBBQUEiOnsiYmFzZSI6Miwidm9sIjozfSwiQ29ycCBCQkIiOnsiYmFzZSI6MCwidm9sIjo1fSwiQ29ycCBDQ0MiOnsiYmFzZSI6LTcsInZvbCI6MjB9LCJDYXBpdGFsIEdvb2RzIjp7ImJhc2UiOi0xNSwidm9sIjoyMH0sIkZpbmFuY2UiOnsiYmFzZSI6LTIwLCJ2b2wiOjI1fSwiRGVmZW5zZSI6eyJiYXNlIjoxMywidm9sIjoxMH0sIkFncmkuIENvbW0iOnsiYmFzZSI6NSwidm9sIjoxNX0sIk1ldGFscyI6eyJiYXNlIjotMTAsInZvbCI6MjV9LCJHb2xkLUVURiI6eyJiYXNlIjoxMCwidm9sIjoxMH19LCJSZWNvdmVyeSI6eyJNb25leSBNYXJrZXQgRnVuZHMiOnsiYmFzZSI6MS41LCJ2b2wiOjF9LCJHb3Z0LiBTZWN1cml0eSI6eyJiYXNlIjoyLCJ2b2wiOjN9LCJDb3JwIEFBQSI6eyJiYXNlIjo0LjUsInZvbCI6NH0sIkNvcnAgQkJCIjp7ImJhc2UiOjcLjUsInZvbCI6OH0sIkNvcnAgQ0NDIjp7ImJhc2UiOjE4LCJ2b2wiOjIwfSwiQ2FwaXRhbCBHb29kcyI6eyJiYXNlIjozMCwidm9sIjoyNX0sIkZpbmFuY2UiOnsiYmFzZSI6MzcuNSwidm9sIjozMH0sIkRlZmVuc2UiOnsiYmFzZSI6NSwidm9sIjoxMH0sIkFncmkuIENvbW0iOnsiYmFzZSI6MTAsInZvbCI6MTV9LCJNZXRhbHMiOnsiYmFzZSI6MjIuNSwidm9sIjoyNX0sIkdvbGQtRVRGIjp7ImJhc2UiOjAsInZvbCI6MTB9fSwiR3Jvd3RoIjp7Ik1vbmV5IE1hcmtldCBGdW5kcyI6eyJiYXNlIjoyLjUsInZvbCI6MX0sIkdvdnQuIFNlY3VyaXR5Ijp7ImJhc2UiOjEsInZvbCI6M30sIkNvcnAgQUFBIjp7ImJhc2UiOjUuNSwidm9sIjo0fSwiQ29ycCBCQkIiOnsiYmFzZSI6MTEuNSwidm9sIjoxMH0sIkNvcnAgQ0NDIjp7ImJhc2UiOjIyLCJ2b2wiOjI1fSwiQ2FwaXRhbCBHb29kcyI6eyJiYXNlIjozNy41LCJ2b2wiOjMwfSwiRmluYW5jZSI6eyJiYXNlIjo0NSwidm9vbCI6NDB9LCJEZWZlbnNlIjp7ImJhc2UiOjAsInZvbCI6MTB9LCJBZ3JpLiBDb21tIjp7ImJhc2UiOjE1LCJ2b2wiOjE1fSwiTWV0YWxzIjp7ImJhc2UiOjMwLCJ2b2wiOjMwfSwiR29sZC1FVEYiOnsiYmFzZSI6LTUsInZvbCI6MTB9fSwiUGVhayI6eyJNb25leSBNYXJrZXQgRnVuZHMiOnsiYmFzZSI6My4yNSwidm9sIjoxLjV9LCJHb3Z0LiBTZWN1cml0eSI6eyJiYXNlIjotMC41LCJ2b2wiOjR9LCJDb3JwIEFBQSI6eyJiYXNlIjozLjUsInZvbCI6NX0sIkNvcnAgQkJCIjp7ImJhc2UiOjQsInZvbCI6MTJ9LCJDb3JwIENDQyI6eyJiYXNlIjowLCJ2b2wiOjI1fSwiQ2FwaXRhbCBHb29kcyI6eyJiYXNlIjoxMi41LCJ2b2wiOjIwfSwiRmluYW5jZSI6eyJiYXNlIjoxMi41LCJ2b2wiOjMwfSwiRGVmZW5zZSI6eyJiYXNlIiwtNSwidm9sIjoxMH0sIkFncmkuIENvbW0iOnsiYmFzZSI6NSwidm9sIjoxNX0sIk1ldGFscyI6eyJiYXNlIiwtNSwidm9sIjoyNX0sIkdvbGQtRVRGIjp7ImJhc2UiOjAsInZvbCI6MTV9fX0=";
+        const rules = JSON.parse(atob(encodedRules));
         const cycleRules = rules[cycle] || rules['Growth'];
         const returns = {};
-
         for (const asset of ALL_ASSETS) {
-            const [min, max] = cycleRules[asset];
-            returns[asset] = parseFloat((Math.random() * (max - min) + min).toFixed(2));
+            const { base, vol } = cycleRules[asset];
+            const returnValue = base + (Math.random() - 0.5) * vol;
+            returns[asset] = parseFloat(returnValue.toFixed(2));
         }
         return returns;
     },
     getNews: (cycle, market) => {
-        const templates = {
-            Recession: [
-                { headline: `Central Bank Signals Further Rate Cuts Amidst ${market} Economic Downturn`, summary: `Fears of a deepening recession are growing as new data shows rising unemployment and falling industrial output. The central bank is expected to cut interest rates further to stimulate the economy, making government bonds more attractive.`},
-                { headline: `${market} Market Enters Bear Territory as GDP Contracts Sharply`, summary: `Investor confidence has hit a new low after official figures confirmed the economy shrank for a second consecutive quarter. Corporate earnings are expected to fall significantly, with cyclical sectors like capital goods and finance hit the hardest.`},
-            ],
-            Trough: [
-                { headline: `Market Volatility Persists in ${market}; Investors Seek Safe Havens`, summary: `Although the pace of economic decline appears to be slowing, uncertainty remains high. Investors are cautiously optimistic but are largely staying in safe-haven assets like gold and high-quality government debt until a clear recovery begins.`},
-                { headline: `Signs of Bottoming? ${market} Industrial Production Stabilizes`, summary: `After months of decline, industrial production figures have remained flat, sparking hope that the worst of the downturn may be over. However, credit markets remain tight, and corporate bond defaults are still a major concern.`},
-            ],
-            Recovery: [
-                { headline: `Economic Green Shoots Appear as ${market} Consumer Confidence Rebounds`, summary: `A surprising jump in consumer confidence and retail sales suggests a recovery is underway. Corporate profits are expected to rebound, leading to a rally in equities, particularly in the finance and capital goods sectors.`},
-                { headline: `Infrastructure Spending Boosts ${market} Recovery Hopes`, summary: `The government has announced a major infrastructure spending plan, boosting shares in capital goods and metals. This fiscal stimulus is expected to accelerate the economic recovery and increase demand for corporate credit.`},
-            ],
-            Growth: [
-                { headline: `${market} Bull Market Rages on as Corporate Earnings Soar`, summary: `The stock market continues to reach new highs, driven by strong corporate earnings and robust economic growth. Investor appetite for risk is high, with significant inflows into equities and high-yield corporate bonds.`},
-                { headline: `Inflation Concerns Rise in ${market} as Economy Overheats`, summary: `Strong economic growth is leading to concerns about rising inflation, prompting the central bank to consider raising interest rates. This could negatively impact government bond prices in the near future.`},
-            ],
-            Peak: [
-                { headline: `Central Bank Hikes Rates to Cool Overheating ${market} Economy`, summary: `In a bid to control inflation, the central bank has raised interest rates for the third time this year. The move has caused jitters in the stock market, with analysts warning that the long period of growth may be coming to an end.`},
-                { headline: `Market Volatility Spikes in ${market} Amidst Fears of a Slowdown`, summary: `After a prolonged period of strong performance, the market is showing signs of fatigue. Corporate earnings growth is slowing, and rising interest rates are making debt more expensive, leading to a sell-off in riskier assets.`},
-            ]
-        };
+        const encodedTemplates = "eyJSZWNlc3Npb24iOlt7ImhlYWRsaW5lIjoiQ2VudHJhbCBCYW5rIFNpZ25hbHMgRnVydGhlciBSYXRlIEN1dHMgQW1pZHN0IHt7bWFya2V0fX0gRWNvbm9taWMgRG93bnR1cm4iLCJzdW1tYXJ5IjoiRmVhcnMgb2YgYSBkZWVwZW5pbmcgcmVjZXNzaW9uIGFyZSBncm93aW5nIGFzIG5ldyBkYXRhIHNob3dzIHJpc2luZyB1bmVtcGxveW1lbnQgYW5kIGZhbGxpbmcgaW5kdXN0cmlhbCBvdXRwdXQuIFRoZSBjZW50cmFsIGJhbmsgaXMgZXhwZWN0ZWQgdG8gY3V0IGludGVyZXN0IHJhdGVzIGZ1cnRoZXIgdG8gc3RpbXVsYXRlIHRoZSBlY29ub215LCBtYWtpbmcgZ292ZXJubWVudCBib25kcyBtb3JlIGF0dHJhY3RpdmUuIn0seyJoZWFkbGluZSI6Int7bWFya2V0fX0gTWFya2V0IEVudGVycyBCZWFyIFRlcnJpdG9yeSBhcyBHRFAgQ29udHJhY3RzIFNoYXJwbHkiLCJzdW1tYXJ5IjoiSW52ZXN0b3IgY29uZmlkZW5jZSBoYXMgaGl0IGEgbmV3IGxvdyBhZnRlciBvZmZpY2lhbCBmaWd1cmVzIGNvbmZpcm1lZCB0aGUgZWNvbm9teSBzaHJhbmsgZm9yIGEgc2Vjb25kIGNvbnNlY3V0aXZlIHF1YXJ0ZXIuIENvcnBvcmF0ZSBlYXJuaW5ncyBhcmUgZXhwZWN0ZWQgdG8gZmFsbCBzaWduaWZpY2FudGx5LCB3aXRoIGN5Y2xpY2FsIHNlY3RvcnMgbGlrZSBjYXBpdGFsIGdvb2RzIGFuZCBmaW5hbmNlIGhpdCB0aGUgaGFyZGVzdC4ifV0sIlRyb3VnaCI6W3siaGVhZGxpbmUiOiJNYXJrZXQgVm9sYXRpbGl0eSBQZXJzaXN0cyBpbiB7e21hcmtldH19OyBJbnZlc3RvcnMgU2VlayBTYWZlIEhhdmVucyIsInN1bW1hcnkiOiJBbHRob3VnaCB0aGUgcGFjZSBvZiBlY29ub21pYyBkZWNsaW5lIGFwcGVhcnMgdG8gYmUgc2xvd2luZywgdW5jZXJ0YWludHkgcmVtYWlucyBoaWdoLiBJbnZlc3RvcnMgYXJlIGNhdXRpb3VzbHkgb3B0aW1pc3RpYyBidXQgYXJlIGxhcmdlbHkgc3RheWluZyBpbiBzYWZlLWhhdmVuIGFzc2V0cyBsaWtlIGdvbGQgYW5kIGhpZ2gtcXVhbGl0eSBnb3Zlcm5tZW50IGRlYnQgdW50aWwgYSBjbGVhciByZWNvdmVyeSBiZWdpbnMuIn0seyJoZWFkbGluZSI6IlNpZ25zIG9mIEJvdHRvbWluZz8ge3ttYXJrZXR9fSBJbmR1c3RyaWFsIFByb2R1Y3Rpb24gU3RhYmlsaXplcyIsInN1bW1hcnkiOiJBZnRlciBtb250aHMgb2YgZGVjbGluZSwgaW5kdXN0cmlhbCBwcm9kdWN0aW9uIGZpZ3VyZXMgaGF2ZSByZW1haW5lZCBmbGF0LCBzcGFya2luZyBob3BlIHRoYXQgdGhlIHdvcnN0IG9mIHRoZSBkb3dudHVybiBtYXkgYmUgb3Zlci4gSG93ZXZlciwgY3JlZGl0IG1hcmtldHMgcmVtYWluIHRpZ2h0LCBhbmQgY29ycG9yYXRlIGJvbmQgZGVmYXVsdHMgYXJlIHN0aWxsIGEgbWFqb3IgY29uY2Vybi4ifV0sIlJlY292ZXJ5IjpbeyJoZWFkbGluZSI6IkVjb25vbWljIEdyZWVuIFNob290cyBBcHBlYXIgYXMge3ttYXJrZXR9fSBDb25zdW1lciBDb25maWRlbmNlIFJlYm91bmRzIiwic3VtbWFyeSI6IkEgc3VycHJpc2luZyBqdW1wIGluIGNvbnN1bWVyIGNvbmZpZGVuY2UgYW5kIHJldGFpbCBzYWxlcyBzdWdnZXN0cyBhIHJlY292ZXJ5IGlzIHVuZGVyd2F5LiBDb3Jwb3JhdGUgcHJvZml0cyBhcmUgZXhwZWN0ZWQgdG8gcmVib3VuZCwgbGVhZGluZyB0byBhIHJhbGx5IGluIGVxdWl0aWVzLCBwYXJ0aWN1bGFybHkgaW4gdGhlIGZpbmFuY2UgYW5kIGNhcGl0YWwgZ29vZHMgc2VjdG9ycy4ifSx7ImhlYWRsaW5lIjoiSW5mcmFzdHJ1Y3R1cmUgU3BlbmRpbmcgQm9vc3RzIHt7bWFya2V0fX0gUmVjb3ZlcnkgSG9wZXMiLCJzdW1tYXJ5IjoiVGhlIGdvdmVybm1lbnQgaGFzIGFubm91bmNlZCBhIG1ham9yIGluZnJhc3RydWN0dXJlIHNwZW5kaW5nIHBsYW4sIGJvb3N0aW5nIHNoYXJlcyBpbiBjYXBpdGFsIGdvb2RzIGFuZCBtZXRhbHMuIFRoaXMgZmlzY2FsIHN0aW11bHVzIGlzIGV4cGVjdGVkIHRvIGFjY2VsZXJhdGUgdGhlIGVjb25vbWljIHJlY292ZXJ5IGFuZCBpbmNyZWFzZSBkZW1hbmQgZm9yIGNvcnBvcmF0ZSBjcmVkaXQuIn1dLCJHcm93dGgiOlt7ImhlYWRsaW5lIjoie3ttYXJrZXR9fSBCdWxsIE1hcmtldCBSYWdlcyBvbiBhcyBDb3Jwb3JhdGUgRWFybmluZ3MgU29hciIsInN1bW1hcnkiOiJUaGUgc3RvY2sgbWFya2V0IGNvbnRpbnVlcyB0byByZWFjaCBuZXcgaGlnaHMsIGRyaXZlbiBieSBzdHJvbmcgY29ycG9yYXRlIGVhcm5pbmdzIGFuZCByb2J1c3QgZWNvbm9taWMgZ3Jvd3RoLiBJbnZlc3RvciBhcHBldGl0ZSBmb3IgcmlzayBpcyBoaWdoLCB3aXRoIHNpZ25pZmljYW50IGluZmxvd3MgaW50byBlcXVpdGllcyBhbmQgaGlnaC15aWVsZCBjb3Jwb3JhdGUgYm9uZHMuIn0seyJoZWFkbGluZSI6IkluZmxhdGlvbiBDb25jZXJucyBSaXNlIGluIHt7bWFya2V0fX0gYXMgRWNvbm9teSBPdmVyaGVhdHMiLCJzdW1tYXJ5IjoiU3Ryb25nIGVjb25vbWljIGdyb3d0aCBpcyBsZWFkaW5nIHRvIGNvbmNlcm5zIGFib3V0IHJpc2luZyBpbmZsYXRpb24sIHByb21wdGluZyB0aGUgY2VudHJhbCBiYW5rIHRvIGNvbnNpZGVyIHJhaXNpbmcgaW50ZXJlc3QgcmF0ZXMuIFRoaXMgY291bGQgbmVnYXRpdmVseSBpbXBhY3QgZ292ZXJubWVudCBib25kIHByaWNlcyBpbiB0aGUgbmVhciBmdXR1cmUuIn1dLCJQZWFrIjpbeyJoZWFkbGluZSI6IkNlbnRyYWwgQmFuayBIaWtlcyBSYXRlcyB0byBDb29sIE92ZXJoZWF0aW5nIHt7bWFya2V0fX0gRWNvbm9teSIsInN1bW1hcnkiOiJJbiBhIGJpZCB0byBjb250cm9sIGluZmxhdGlvbiwgdGhlIGNlbnRyYWwgYmFuayBoYXMgcmFpc2VkIGludGVyZXN0IHJhdGVzIGZvciB0aGUgdGhpcmQgdGltZSB0aGlzIHllYXIuIFRoZSBtb3ZlIGhhcyBjYXVzZWQgaml0dGVycyBpbiB0aGUgc3RvY2sgbWFya2V0LCB3aXRoIGFuYWx5c3RzIHdhcm5pbmcgdGhhdCB0aGUgbG9uZyBwZXJpb2Qgb2YgZ3Jvd3RoIG1heSBiZSBjb21pbmcgdG8gYW4gZW5kLiJ9LHsiaGVhZGxpbmUiOiJNYXJrZXQgVm9sYXRpbGl0eSBTcGlrZXMgaW4ge3ttYXJrZXR9fSBBbWlkc3QgRmVhcnMgb2YgYSBTbG93ZG93biIsInN1bW1hcnkiOiJBZnRlciBhIHByb2xvbmdlZCBwZXJpb2Qgb2Ygc3Ryb25nIHBlcmZvcm1hbmNlLCB0aGUgbWFya2V0IGlzIHNob3dpbmcgc2lnbnMgb2YgZmF0aWd1ZS4gQ29ycG9yYXRlIGVhcm5pbmdzIGdyb3d0aCBpcyBzbG93aW5nLCBhbmQgcmlzaW5nIGludGVyZXN0IHJhdGVzIGFyZSBtYWtpbmcgZGVidCBtb3JlIGV4cGVuc2l2ZSwgbGVhZGluZyB0byBhIHNlbGwtb2ZmIGluIHJpc2tpZXIgYXNzZXRzLiJ9XX0=";
+        const templates = JSON.parse(atob(encodedTemplates));
         const cycleTemplates = templates[cycle] || templates['Growth'];
         const selected = cycleTemplates[Math.floor(Math.random() * cycleTemplates.length)];
-        return `${selected.headline}\n\n${selected.summary}`;
+        return `${selected.headline.replace('{{market}}', market)}\n\n${selected.summary}`;
     }
 };
 
@@ -246,10 +220,16 @@ function AdminDashboard({ onLogout }) {
     useEffect(() => {
         const q = query(collection(db, "games"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            setActiveGames(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const games = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setActiveGames(games);
+            // This is the fix: refresh the selectedGame state when the games list updates
+            if (selectedGame) {
+                const updatedSelectedGame = games.find(g => g.id === selectedGame.id);
+                setSelectedGame(updatedSelectedGame);
+            }
         });
         return () => unsubscribe();
-    }, []);
+    }, [selectedGame]);
 
     const handleCreateGame = async () => {
         const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -385,7 +365,7 @@ function AdminDashboard({ onLogout }) {
                                 <p className="text-xl">Round: <strong className="text-green-400">{selectedGame.currentRound > selectedGame.settings.rounds ? 'Finished' : selectedGame.currentRound}</strong></p>
                                 <div className="space-x-2">
                                     {selectedGame.status === 'pending' && <button onClick={handleStartGame} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Start Game</button>}
-                                    {selectedGame.status === 'active' && <button onClick={handleAdvanceRound} disabled={isLoading} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold disabled:bg-gray-500">{isLoading ? 'Generating...' : 'Advance Round'}</button>}
+                                    {selectedGame.status === 'active' && <button onClick={handleAdvanceRound} disabled={isLoading} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold disabled:bg-gray-500">{isLoading ? 'Advancing...' : 'Advance Round'}</button>}
                                     <button onClick={() => handleDeleteGame(selectedGame.id)} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold">Delete Game</button>
                                 </div>
                             </div>
@@ -435,6 +415,7 @@ function PlayerDashboard({ gameId, playerId, onLogout }) {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'portfolio': return <PortfolioDecisions game={game} player={player} playerId={playerId} />;
+            case 'pastReturns': return <PastReturns game={game} />;
             case 'competitors': return <ViewCompetitors game={game} players={playersArray} currentPlayerId={playerId} />;
             case 'leaderboard': return <Leaderboard players={playersArray} gameStatus={game.status} />;
             default: return null;
@@ -444,7 +425,12 @@ function PlayerDashboard({ gameId, playerId, onLogout }) {
     return (
         <div className="flex h-screen bg-gray-900 text-white">
             <div className="w-64 bg-gray-800 p-6 flex flex-col justify-between">
-                <div><h2 className="text-2xl font-bold mb-8 text-cyan-400">P-Sim</h2><nav className="space-y-4"><button onClick={() => setActiveTab('portfolio')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'portfolio' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Portfolio</button><button onClick={() => setActiveTab('competitors')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'competitors' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Competitors</button><button onClick={() => setActiveTab('leaderboard')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'leaderboard' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Leaderboard</button></nav></div>
+                <div><h2 className="text-2xl font-bold mb-8 text-cyan-400">P-Sim</h2><nav className="space-y-4">
+                    <button onClick={() => setActiveTab('portfolio')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'portfolio' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Portfolio</button>
+                    <button onClick={() => setActiveTab('pastReturns')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'pastReturns' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Past Returns</button>
+                    <button onClick={() => setActiveTab('competitors')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'competitors' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Competitors</button>
+                    <button onClick={() => setActiveTab('leaderboard')} className={`w-full text-left px-4 py-2 rounded-lg ${activeTab === 'leaderboard' ? 'bg-cyan-600' : 'hover:bg-gray-700'}`}>Leaderboard</button>
+                </nav></div>
                 <div><div className="text-gray-400 mb-4"><p>Player: {player.name}</p><p>Game ID: {gameId}</p></div><button onClick={onLogout} className="w-full px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-bold transition-colors">Logout</button></div>
             </div>
             <div className="flex-1 p-10 overflow-y-auto">{renderTabContent()}</div>
@@ -472,9 +458,13 @@ function PortfolioDecisions({ game, player, playerId }) {
     }, [game.currentRound, game.status, game.roundSettings]);
 
     useEffect(() => {
-        const currentAllocations = player.allocations?.[`round${game.currentRound}`] || ALL_ASSETS.reduce((acc, asset) => ({ ...acc, [asset]: 0 }), {});
-        setAllocations(currentAllocations);
-        setTotal(Object.values(currentAllocations).reduce((sum, val) => sum + (val || 0), 0));
+        const lastRoundAllocations = player.allocations?.[`round${game.currentRound - 1}`];
+        const currentRoundAllocations = player.allocations?.[`round${game.currentRound}`];
+
+        const initialAllocations = currentRoundAllocations || lastRoundAllocations || ALL_ASSETS.reduce((acc, asset) => ({ ...acc, [asset]: 0 }), {});
+        
+        setAllocations(initialAllocations);
+        setTotal(Object.values(initialAllocations).reduce((sum, val) => sum + (val || 0), 0));
     }, [game.currentRound, player.allocations]);
 
     const handleAllocationChange = (asset, value) => {
@@ -508,6 +498,51 @@ function PortfolioDecisions({ game, player, playerId }) {
             <div className="flex justify-between items-center mb-8"><div><p className="text-gray-400">Portfolio Value</p><p className="text-4xl font-bold text-green-400">₹{player.portfolioValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p></div><div className="text-right"><p className="text-gray-400">Total Allocation</p><p className={`text-4xl font-bold ${total === 100 ? 'text-green-400' : 'text-red-400'}`}>{total}%</p></div></div>
             <div className="space-y-8">{Object.entries(ASSET_CLASSES).map(([category, assets]) => (<div key={category} className="bg-gray-800 p-6 rounded-2xl"><h3 className="text-2xl font-bold capitalize mb-4 text-cyan-400">{category}</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{assets.map(asset => (<div key={asset}><label className="block mb-2 font-medium">{asset}</label><input type="number" min="0" max="100" value={allocations[asset] || 0} onChange={(e) => handleAllocationChange(asset, e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500" disabled={isRoundSubmitted || game.status !== 'active'}/></div>))}</div></div>))}</div>
             <div className="mt-8 text-center">{message.text && <p className={`mb-4 text-lg ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{message.text}</p>}{isGameFinished && <p className="text-green-400 text-lg font-bold">The game has finished. Check the final leaderboard!</p>}{game.status === 'pending' && <p className="text-yellow-400 text-lg">The game has not started yet.</p>}{isRoundSubmitted && game.status === 'active' && <p className="text-green-400 text-lg">Your portfolio for Round {game.currentRound} is submitted.</p>}{!isRoundSubmitted && game.status === 'active' && (<button onClick={handleSave} className="px-10 py-4 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-bold text-xl transition-colors">Save Portfolio for Round {game.currentRound}</button>)}</div>
+        </div>
+    );
+}
+
+// --- Past Returns Component ---
+function PastReturns({ game }) {
+    const pastRound = game.currentRound - 1;
+    if (pastRound < 1) {
+        return (
+            <div className="bg-gray-800 p-8 rounded-2xl">
+                <h2 className="text-3xl font-bold mb-6 text-indigo-400">Past Round Returns</h2>
+                <p className="text-center text-gray-400 mt-8">Past round data will be available from Round 2 onwards.</p>
+            </div>
+        );
+    }
+
+    const returns = game.assetReturns?.[`round${pastRound}`];
+
+    if (!returns) {
+        return (
+            <div className="bg-gray-800 p-8 rounded-2xl">
+                <h2 className="text-3xl font-bold mb-6 text-indigo-400">Past Round Returns</h2>
+                <p className="text-center text-gray-400 mt-8">Data for the previous round is not yet available.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-gray-800 p-8 rounded-2xl">
+            <h2 className="text-3xl font-bold mb-6 text-indigo-400">Returns from Round {pastRound}</h2>
+            <div className="space-y-6">
+                {Object.entries(ASSET_CLASSES).map(([category, assets]) => (
+                     <div key={category}>
+                        <h3 className="text-xl font-bold capitalize mb-3 text-cyan-400">{category}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                             {assets.map(asset => (
+                                 <div key={asset} className="bg-gray-700 p-4 rounded-lg text-center">
+                                     <p className="text-gray-300">{asset}</p>
+                                     <p className={`text-2xl font-bold ${returns[asset] >= 0 ? 'text-green-400' : 'text-red-400'}`}>{returns[asset]}%</p>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
