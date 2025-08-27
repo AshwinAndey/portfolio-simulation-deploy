@@ -2,24 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, updateDoc, deleteDoc } from 'firebase/firestore';
-
-// --- Firebase Configuration ---
-const firebaseConfig = {
-    apiKey: "AIzaSyBazllEufviy3hnnv4tQgpoBAKl3y0LQ6c",
-    authDomain: "portfolio-sim-b5a6a.firebaseapp.com",
-    projectId: "portfolio-sim-b5a6a",
-    storageBucket: "portfolio-sim-b5a6a.appspot.com",
-    messagingSenderId: "691921863009",
-    appId: "1:691921863009:web:c9daa1a696102358950520",
-    measurementId: "G-M1Q5LGXM3W"
-};
-
-// --- Initialize Firebase ---
+const encodedConfig = "eyJhcGlLZXkiOiJBSXphU3lCYXpsbEV1ZnZpeTNobm52NHRRZ3BvQkFLbDN5MExRNmMiLCJhdXRoRG9tYWluIjoicG9ydGZvbGlvLXNpbS1iNWE2YS5maXJlYmFzZWFwcC5jb20iLCJwcm9qZWN0SWQiOiJwb3J0Zm9saW8tc2ltLWI1YTZhIiwic3RvcmFnZUJ1Y2tldCI6InBvcnRmb2xpby1zaW0tYjVhNmEuYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjY5MTkyMTg2MzAwOSIsImFwcElkIjoiMTowOTE5MjE4NjMwMDk6d2ViOmM5ZGFhMWE2OTYxMDIzNTg5NTA1MjAiLCJtZWFzdXJlbWVudElkIjoiRy1NMVFNTEdYTTNXIn0=";
+const firebaseConfig = JSON.parse(atob(encodedConfig));
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- Asset Classes & Game Settings ---
 const ASSET_CLASSES = {
     debt: ['Money Market Funds', 'Govt. Security', 'Corp AAA', 'Corp BBB', 'Corp CCC'],
     equity: ['Capital Goods', 'Finance', 'Defense'],
@@ -28,12 +16,9 @@ const ASSET_CLASSES = {
 const ALL_ASSETS = [...ASSET_CLASSES.debt, ...ASSET_CLASSES.equity, ...ASSET_CLASSES.others];
 const BUSINESS_CYCLES = ['Recession', 'Trough', 'Recovery', 'Growth', 'Peak'];
 const MARKETS = ['Indian', 'US', 'Global'];
+const ADMIN_USER = "YWRtaW4="; 
+const ADMIN_PASS = "YWRtaW4xMjM=";
 
-// --- Encoded Admin Credentials ---
-const ADMIN_USER = "YWRtaW4="; // "admin"
-const ADMIN_PASS = "YWRtaW4xMjM="; // "admin123"
-
-// --- Encoded Rule-Based Scenario Engine ---
 const scenarioEngine = {
     getAssetReturns: (cycle) => {
         const encodedRules = "eyJSZWNlc3Npb24iOnsiTW9uZXkgTWFya2V0IEZ1bmRzIjp7ImJhc2UiOjEuNSwidm9sIjoyfSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6Mywidm9sIjoyfSwiQ29ycCBBQUEiOnsiYmFzZSI6MSwidm9sIjozfSwiQ29ycCBCQkIiOnsiYmFzZSI6LTMsInZvbCI6NX0sIkNvcnAgQ0NDIjp7ImJhc2UiOi0xNSwidm9sIjoxNX0sIkNhcGl0YWwgR29vZHMiOnsiYmFzZSI6LTI1LCJ2b2wiOjE1fSwiRmluYW5jZSI6eyJiYXNlIjotMzAsInZvbCI6MTV9LCJEZWZlbnNlIjp7ImJhc2UiOjEwLCJ2b2wiOjEwfSwiQWdyaS4gQ29tbSI6eyJiYXNlIjowLCJ2b2wiOjEwfSwiTWV0YWxzIjp7ImJhc2UiOi0yMCwidm9sIjoxNX0sIkdvbGQtRVRGIjp7ImJhc2UiOjE1LCJ2b2wiOjEwfX0sIlRyb3VnaCI6eyJNb25leSBNYXJrZXQgRnVuZHMiOnsiYmFzZSI6MSwidm9sIjoxfSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6NCwidm9sIjoyfSwiQ29ycCBBQUEiOnsiYmFzZSI6Miwidm9sIjozfSwiQ29ycCBCQkIiOnsiYmFzZSI6MCwidm9sIjo1fSwiQ29ycCBDQ0MiOnsiYmFzZSI6LTcsInZvbCI6MjB9LCJDYXBpdGFsIEdvb2RzIjp7ImJhc2UiOi0xNSwidm9sIjoyMH0sIkZpbmFuY2UiOnsiYmFzZSI6LTIwLCJ2b2wiOjI1fSwiRGVmZW5zZSI6eyJiYXNlIjoxMywidm9sIjoxMH0sIkFncmkuIENvbW0iOnsiYmFzZSI6NSwidm9sIjoxNX0sIk1ldGFscyI6eyJiYXNlIjotMTAsInZvbCI6MjV9LCJHb2xkLUVURiI6eyJiYXNlIjoxMCwidm9sIjoxMH19LCJSZWNvdmVyeSI6eyJNb25leSBNYXJrZXQgRnVuZHMiOnsiYmFzZSI6MS41LCJ2b2wiOjF9LCJHb3Z0LiBTZWN1cml0eSI6eyJiYXNlIjoyLCJ2b2wiOjN9LCJDb3JwIEFBQSI6eyJiYXNlIjo0LjUsInZvbCI6NH0sIkNvcnAgQkJCIjp7ImJhc2UiOjcuNSwidm9sIjo4fSwiQ29ycCBDQ0MiOnsiYmFzZSI6MTgsInZvbCI6MjB9LCJDYXBpdGFsIEdvb2RzIjp7ImJhc2UiOjMwLCJ2b2wiOjI1fSwiRmluYW5jZSI6eyJiYXNlIjozNy41LCJ2b2wiOjMwfSwiRGVmZW5zZSI6eyJiYXNlIjo1LCJ2b2wiOjEwfSwiQWdyaS4gQ29tbSI6eyJiYXNlIjoxMCwidm9sIjoxNX0sIk1ldGFscyI6eyJiYXNlIjoyMi41LCJ2b2wiOjI1fSwiR29sZC1FVEYiOnsiYmFzZSI6MCwidm9sIjoxMH19LCJHcm93dGgiOnsiTW9uZXkgTWFya2V0IEZ1bmRzIjp7ImJhc2UiOjIuNSwidm9sIjoxfSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6MSwidm9sIjozfSwiQ29ycCBBQUEiOnsiYmFzZSI6NS41LCJ2b2wiOjR9LCJDb3JwIEJCQiI6eyJiYXNlIjoxMS41LCJ2b2wiOjEwfSwiQ29ycCBDQ0MiOnsiYmFzZSI6MjIsInZvbCI6MjV9LCJDYXBpdGFsIEdvb2RzIjp7ImJhc2UiOjM3LjUsInZvbCI6MzB9LCJGaW5hbmNlIjp7ImJhc2UiOjQ1LCJ2b2wiOjQwfSwiRGVmZW5zZSI6eyJiYXNlIjowLCJ2b2wiOjEwfSwiQWdyaS4gQ29tbSI6eyJiYXNlIjoxNSwidm9sIjoxNX0sIk1ldGFscyI6eyJiYXNlIjozMCwidm9sIjozMH0sIkdvbGQtRVRGIjp7ImJhc2UiOi01LCJ2b2wiOjEwfX0sIlBlYWsiOnsiTW9uZXkgTWFya2V0IEZ1bmRzIjp7ImJhc2UiOjMuMjUsInZvbCI6MS41fSwiR292dC4gU2VjdXJpdHkiOnsiYmFzZSI6LTAuNSwidm9sIjo0fSwiQ29ycCBBQUEiOnsiYmFzZSI6My41LCJ2b2wiOjV9LCJDb3JwIEJCQiI6eyJiYXNlIjo0LCJ2b2wiOjEyfSwiQ29ycCBDQ0MiOnsiYmFzZSI6MCwidm9sIjoyNX0sIkNhcGl0YWwgR29vZHMiOnsiYmFzZSI6MTIuNSwidm9sIjoyMH0sIkZpbmFuY2UiOnsiYmFzZSI6MTIuNSwidm9sIjozMH0sIkRlZmVuc2UiOnsiYmFzZSI6LTUsInZvbCI6MTB9LCJBZ3JpLiBDb21tIjp7ImJhc2UiOjUsInZvbCI6MTV9LCJNZXRhbHMiOnsiYmFzZSI6LTUsInZvbCI6MjV9LCJHb2xkLUVURiI6eyJiYXNlIjowLCJ2b2wiOjE1fX19";
@@ -56,7 +41,6 @@ const scenarioEngine = {
     }
 };
 
-// --- Main App Component ---
 export default function App() {
     const [, setUser] = useState(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
@@ -205,7 +189,7 @@ export default function App() {
     return <div className="font-sans bg-gray-100 min-h-screen">{renderContent()}</div>;
 }
 
-// --- Admin Dashboard Component ---
+
 function AdminDashboard({ onLogout }) {
     const [gameSettings, setGameSettings] = useState({ rounds: 5, initialInvestment: 10000000 });
     const [roundSettings, setRoundSettings] = useState(Array(5).fill({ cycle: BUSINESS_CYCLES[0], market: MARKETS[0] }));
@@ -397,7 +381,6 @@ function AdminDashboard({ onLogout }) {
     );
 }
 
-// --- Player Dashboard Component ---
 function PlayerDashboard({ gameId, playerId, onLogout }) {
     const [game, setGame] = useState(null);
     const [activeTab, setActiveTab] = useState('portfolio');
